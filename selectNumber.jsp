@@ -89,8 +89,6 @@ text-align: center;
    							
    							PatientDAO patientDAO = DAOFactory.getProductionInstance().getPatientDAO();
    							PatientBean patientBean = patientDAO.getPatient(patientid);
-   							String patientFirstName = patientBean.getFirstName();
-   							String patientLastName = patientBean.getLastname();
    							String patientEmail = patientBean.getEmail();
    							
    							
@@ -98,15 +96,25 @@ text-align: center;
    							SendMessageAction action = new SendMessageAction(prodDAO, loggedInMID);
    							MessageBean messageNew = new MessageBean();
    							
+   							String body = "You have an appointment on ";
+   							body .= date;
+   							body .= " with Dr. ";
+   							body .= hcpName;
    							
-   							String body = "You have an appointment on <TIME>, <DATE> with Dr. <DOCTOR>";
+   							int N = 0;
+   							//N is num of days between appt date and current date
    							
-   							messageNew.setBody(request.getParameter("messageBody"));
+   							String subject = "Reminder: upcoming appointment in ";
+   							subject .= N;
+   							subject .=" day(s)";
+   							
+   							
+   							messageNew.setBody(body);
    							messageNew.setFrom(loggedInMID);
-   							messageNew.setTo(original.getFrom());
-   							messageNew.setSubject(request.getParameter("subject"));
+   							messageNew.setTo(patientid);
+   							messageNew.setSubject(subject);
    							messageNew.setRead(0);
-   							messageNew.setParentMessageId(original.getMessageId());
+   							
    							action.sendMessage(messageNew);
    							
    							//send fake email
