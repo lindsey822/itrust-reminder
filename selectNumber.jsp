@@ -100,14 +100,17 @@ text-align: center;
    							body .= date;
    							body .= " with Dr. ";
    							body .= hcpName;
+   							console.log(body);
    							
    							int N = 0;
    							//N is num of days between appt date and current date
+   							Timestampt curr_date;
+   							//do something to calculate N
    							
    							String subject = "Reminder: upcoming appointment in ";
    							subject .= N;
    							subject .=" day(s)";
-   							
+   							console.log(subject);
    							
    							messageNew.setBody(body);
    							messageNew.setFrom(loggedInMID);
@@ -118,6 +121,17 @@ text-align: center;
    							action.sendMessage(messageNew);
    							
    							//send fake email
+   							FakeEmailDAODAO emailDAO = DAOFactory.getProductionInstance().getFakeEmailDAO();
+   							Email emailNew = new Email();
+   							List<String> toList;
+   							toList.add(patientEmail);
+   							emailNew.setToList(toList);
+   							emailNew.setFrom("");//what is admin's email address???
+   							emailNew.setSubject(subject);
+   							emailNew.setBody(body);
+   							emailNew.setTimeAdded(curr_date);
+   							
+   							emailDAO.sendEmailRecord(email);
    						}
    					}
    				%>
