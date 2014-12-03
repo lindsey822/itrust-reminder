@@ -9,11 +9,16 @@
 <%@page import="edu.ncsu.csc.itrust.exception.ITrustException"%>
 <%@page import="edu.ncsu.csc.itrust.exception.FormValidationException"%>
 <%@page import="edu.ncsu.csc.itrust.beans.MessageBean"%>
+<%@page import="edu.ncsu.csc.itrust.beans.ApptBean"%>
 <%@page import="edu.ncsu.csc.itrust.dao.DAOFactory"%>
 <%@page import="edu.ncsu.csc.itrust.action.EditPersonnelAction"%>
 <%@page import="edu.ncsu.csc.itrust.dao.mysql.PersonnelDAO"%>
 <%@page import="edu.ncsu.csc.itrust.dao.mysql.PatientDAO"%>
+<%@page import="edu.ncsu.csc.itrust.dao.mysql.MessageDAO"%>
+
 <%@page import="edu.ncsu.csc.itrust.action.ViewMyMessagesAction"%>
+<%@page import="edu.ncsu.csc.itrust.action.SendMessageAction"%>
+
 <%@page import="edu.ncsu.csc.itrust.action.EditPatientAction"%>
 <%@page import="edu.ncsu.csc.itrust.action.EditPersonnelAction"%>
 
@@ -73,7 +78,39 @@ text-align: center;
    						//for each patient id, grab email address and send a fake email
    						//for each doctor id, grad doctor's name
    						//Lingzi's part
-   						
+   						for (ApptBean appt : list) {
+   							long patientid = appt.getPatient();
+   							long hcpid = appt.getHcp();
+   							Timestampt dateTS = appt.getDate();
+   							String date = dateTS.toString();
+   							
+   							PersonnelDAO hcpDAO = DAOFactory.getProductionInstance().getPersonnelDAO();
+   							String hcpName = hcpDAO.getName(hcpid);
+   							
+   							PatientDAO patientDAO = DAOFactory.getProductionInstance().getPatientDAO();
+   							PatientBean patientBean = patientDAO.getPatient(patientid);
+   							String patientFirstName = patientBean.getFirstName();
+   							String patientLastName = patientBean.getLastname();
+   							String patientEmail = patientBean.getEmail();
+   							
+   							
+   							//send message
+   							SendMessageAction action = new SendMessageAction(prodDAO, loggedInMID);
+   							MessageBean messageNew = new MessageBean();
+   							
+   							
+   							String body = "You have an appointment on <TIME>, <DATE> with Dr. <DOCTOR>";
+   							
+   							messageNew.setBody(request.getParameter("messageBody"));
+   							messageNew.setFrom(loggedInMID);
+   							messageNew.setTo(original.getFrom());
+   							messageNew.setSubject(request.getParameter("subject"));
+   							messageNew.setRead(0);
+   							messageNew.setParentMessageId(original.getMessageId());
+   							action.sendMessage(messageNew);
+   							
+   							//send fake email
+   						}
    					}
    				%>
 				}
