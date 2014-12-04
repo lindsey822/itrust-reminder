@@ -70,68 +70,109 @@ text-align: center;
    						
    						//search for appointments that are checuled in num days
    						List<ApptBean> list = new ArrayList<MessageBean>();
-   						//Aele's part
-   						//end of searching
+   						ApptDAO apptDAO = DAOFactory.getProductionInstance().getApptDAO();
+   						list = apptDAO.getAllAppts();
    						
-   						//iterate thru list, for each ApptBean, grab patient id, doctor id, date, 
+   						//iterate thru list, for each ApptBean, check if within num days
+   						//if so, needs a reminder message
+   						//grab patient id, doctor id, date, 
    						//and create a messagebean with sender=="admin"
    						//for each patient id, grab email address and send a fake email
    						//for each doctor id, grad doctor's name
    						//Lingzi's part
    						for (ApptBean appt : list) {
-   							long patientid = appt.getPatient();
-   							long hcpid = appt.getHcp();
+   							//check date(if will happen within num days)
    							Timestampt dateTS = appt.getDate();
    							String date = dateTS.toString();
+   							Calendar calendar = Calendar.getInstance();
+   							Date now = calendar.getTime();
+   							Timestamp current = new Timestamp(now.getTime());
    							
-   							PersonnelDAO hcpDAO = DAOFactory.getProductionInstance().getPersonnelDAO();
-   							String hcpName = hcpDAO.getName(hcpid);
+   							//find number of days from now
+   							boolean negative = false;
+
+   					      GregorianCalendar cal = new GregorianCalendar();
+   					      cal.setTime(current);
+   					      cal.set(Calendar.HOUR_OF_DAY, 0);
+   					      cal.set(Calendar.MINUTE, 0);
+   					      cal.set(Calendar.SECOND, 0);
+   					      cal.set(Calendar.MILLISECOND, 0);
+
+   					      GregorianCalendar calEnd = new GregorianCalendar();
+   					      calEnd.setTime(dateTS);
+   					      calEnd.set(Calendar.HOUR_OF_DAY, 0);
+   					      calEnd.set(Calendar.MINUTE, 0);
+   					      calEnd.set(Calendar.SECOND, 0);
+   					      calEnd.set(Calendar.MILLISECOND, 0);
+
+
+   					      if (cal.get(Calendar.YEAR) == calEnd.get(Calendar.YEAR))   {
+   					          if (negative)
+   					               return (calEnd.get(Calendar.DAY_OF_YEAR) - cal.get(Calendar.DAY_OF_YEAR)) * -1;
+   					          return calEnd.get(Calendar.DAY_OF_YEAR) - cal.get(Calendar.DAY_OF_YEAR);
+   					      }
+
+   					      int days = 0;
+   					      while (calEnd.after(cal))    {
+   					          cal.add (Calendar.DAY_OF_YEAR, 1);
+   					          days++;
+   					      }
+   					      
+   							//end
    							
-   							PatientDAO patientDAO = DAOFactory.getProductionInstance().getPatientDAO();
-   							PatientBean patientBean = patientDAO.getPatient(patientid);
-   							String patientEmail = patientBean.getEmail();
    							
-   							
-   							//send message
-   							SendMessageAction action = new SendMessageAction(prodDAO, loggedInMID);
-   							MessageBean messageNew = new MessageBean();
-   							
-   							String body = "You have an appointment on ";
-   							body .= date;
-   							body .= " with Dr. ";
-   							body .= hcpName;
-   							console.log(body);
-   							
-   							int N = 0;
-   							//N is num of days between appt date and current date
-   							Timestampt curr_date;
-   							//do something to calculate N
-   							
-   							String subject = "Reminder: upcoming appointment in ";
-   							subject .= N;
-   							subject .=" day(s)";
-   							console.log(subject);
-   							
-   							messageNew.setBody(body);
-   							messageNew.setFrom(loggedInMID);
-   							messageNew.setTo(patientid);
-   							messageNew.setSubject(subject);
-   							messageNew.setRead(0);
-   							
-   							action.sendMessage(messageNew);
-   							
-   							//send fake email
-   							FakeEmailDAODAO emailDAO = DAOFactory.getProductionInstance().getFakeEmailDAO();
-   							Email emailNew = new Email();
-   							List<String> toList;
-   							toList.add(patientEmail);
-   							emailNew.setToList(toList);
-   							emailNew.setFrom("");//what is admin's email address???
-   							emailNew.setSubject(subject);
-   							emailNew.setBody(body);
-   							emailNew.setTimeAdded(curr_date);
-   							
-   							emailDAO.sendEmailRecord(email);
+   							if(days <= num){
+	   							long patientid = appt.getPatient();
+	   							long hcpid = appt.getHcp();
+	   							
+	   							PersonnelDAO hcpDAO = DAOFactory.getProductionInstance().getPersonnelDAO();
+	   							String hcpName = hcpDAO.getName(hcpid);
+	   							
+	   							PatientDAO patientDAO = DAOFactory.getProductionInstance().getPatientDAO();
+	   							PatientBean patientBean = patientDAO.getPatient(patientid);
+	   							String patientEmail = patientBean.getEmail();
+	   							
+	   							
+	   							//send message
+	   							SendMessageAction action = new SendMessageAction(prodDAO, loggedInMID);
+	   							MessageBean messageNew = new MessageBean();
+	   							
+	   							String body = "You have an appointment on ";
+	   							body .= date;
+	   							body .= " with Dr. ";
+	   							body .= hcpName;
+	   							console.log(body);
+	   							
+	   							int N = 0;
+	   							//N is num of days between appt date and current date
+	   							//do something to calculate N
+	   							
+	   							String subject = "Reminder: upcoming appointment in ";
+	   							subject .= N;
+	   							subject .=" day(s)";
+	   							console.log(subject);
+	   							
+	   							messageNew.setBody(body);
+	   							messageNew.setFrom(loggedInMID);
+	   							messageNew.setTo(patientid);
+	   							messageNew.setSubject(subject);
+	   							messageNew.setRead(0);
+	   							
+	   							action.sendMessage(messageNew);
+	   							
+	   							//send fake email
+	   							FakeEmailDAODAO emailDAO = DAOFactory.getProductionInstance().getFakeEmailDAO();
+	   							Email emailNew = new Email();
+	   							List<String> toList;
+	   							toList.add(patientEmail);
+	   							emailNew.setToList(toList);
+	   							emailNew.setFrom("");//what is admin's email address???
+	   							emailNew.setSubject(subject);
+	   							emailNew.setBody(body);
+	   							emailNew.setTimeAdded(curr_date);
+	   							
+	   							emailDAO.sendEmailRecord(email);
+   							}
    						}
    					}
    				%>
