@@ -2,6 +2,8 @@
 <%@page errorPage="/auth/exceptionHandler.jsp"%>
 
 <%@page import="java.util.List"%>
+<%@page import="java.util.Calendar"%>
+<%@page import="java.util.GregorianCalendar"%>
 <%@page import="java.util.Date"%>
 <%@page import="java.sql.Timestamp"%>
 <%@page import="java.text.DateFormat"%>
@@ -10,11 +12,15 @@
 <%@page import="edu.ncsu.csc.itrust.exception.FormValidationException"%>
 <%@page import="edu.ncsu.csc.itrust.beans.MessageBean"%>
 <%@page import="edu.ncsu.csc.itrust.beans.ApptBean"%>
+<%@page import="edu.ncsu.csc.itrust.beans.PatientBean"%>
+<%@page import="edu.ncsu.csc.itrust.beans.Email"%>
 <%@page import="edu.ncsu.csc.itrust.dao.DAOFactory"%>
 <%@page import="edu.ncsu.csc.itrust.action.EditPersonnelAction"%>
 <%@page import="edu.ncsu.csc.itrust.dao.mysql.PersonnelDAO"%>
 <%@page import="edu.ncsu.csc.itrust.dao.mysql.PatientDAO"%>
 <%@page import="edu.ncsu.csc.itrust.dao.mysql.MessageDAO"%>
+<%@page import="edu.ncsu.csc.itrust.dao.mysql.ApptDAO"%>
+<%@page import="edu.ncsu.csc.itrust.dao.mysql.FakeEmailDAO"%>
 
 <%@page import="edu.ncsu.csc.itrust.action.ViewMyMessagesAction"%>
 <%@page import="edu.ncsu.csc.itrust.action.SendMessageAction"%>
@@ -67,9 +73,10 @@ text-align: center;
    					if(request.getParameter("send") != null){
    						//logic that needs to be executed after redirection when the save button is clicked
    						String num = request.getParameter("days");
+   						int numI = Integer.parseInt(num);
    						
    						//search for appointments that are checuled in num days
-   						List<ApptBean> list = new ArrayList<MessageBean>();
+   						List<ApptBean> list = new ArrayList<ApptBean>();
    						ApptDAO apptDAO = DAOFactory.getProductionInstance().getApptDAO();
    						list = apptDAO.getAllAppts();
    						
@@ -79,27 +86,44 @@ text-align: center;
    						//and create a messagebean with sender=="admin"
    						//for each patient id, grab email address and send a fake email
    						//for each doctor id, grad doctor's name
-   						//Lingzi's part
+   						
+   						Calendar calendar = Calendar.getInstance();
+   						Date now = calendar.getTime();
+   						Timestamp current = new Timestamp(now.getTime());
+   						String current_s = current.toString();
+   							
+   						System.out.println("current date is " + current_s);
+   						
    						for (ApptBean appt : list) {
    							//check date(if will happen within num days)
-   							Timestampt dateTS = appt.getDate();
+   							Timestamp dateTS = appt.getDate();
    							String date = dateTS.toString();
-   							Calendar calendar = Calendar.getInstance();
-   							Date now = calendar.getTime();
-   							Timestamp current = new Timestamp(now.getTime());
+							System.out.println("the date for current appointment is " + date);
+									
+							//for some reason, the following algorithm cannot handle with dates
+							//that are too far away from now
+							//compare year, if in previous years or more than one year ahead,
+							//continue to next iteration
+							
    							
    							//find number of days from now
-   							boolean negative = false;
+   							int diff = 0;
+							Timestamp start = current;
+							Timestamp end = dateTS;
+									
+   					      if (end.before(start))  {
+   					          continue;
+   					      }
 
    					      GregorianCalendar cal = new GregorianCalendar();
-   					      cal.setTime(current);
+   					      cal.setTime(start);
    					      cal.set(Calendar.HOUR_OF_DAY, 0);
    					      cal.set(Calendar.MINUTE, 0);
    					      cal.set(Calendar.SECOND, 0);
    					      cal.set(Calendar.MILLISECOND, 0);
 
    					      GregorianCalendar calEnd = new GregorianCalendar();
-   					      calEnd.setTime(dateTS);
+   					      calEnd.setTime(end);
    					      calEnd.set(Calendar.HOUR_OF_DAY, 0);
    					      calEnd.set(Calendar.MINUTE, 0);
    					      calEnd.set(Calendar.SECOND, 0);
@@ -107,21 +131,23 @@ text-align: center;
 
 
    					      if (cal.get(Calendar.YEAR) == calEnd.get(Calendar.YEAR))   {
-   					          if (negative)
-   					               return (calEnd.get(Calendar.DAY_OF_YEAR) - cal.get(Calendar.DAY_OF_YEAR)) * -1;
-   					          return calEnd.get(Calendar.DAY_OF_YEAR) - cal.get(Calendar.DAY_OF_YEAR);
-   					      }
+   					          diff = calEnd.get(Calendar.DAY_OF_YEAR) - cal.get(Calendar.DAY_OF_YEAR);
+   					      } else{
 
-   					      int days = 0;
-   					      while (calEnd.after(cal))    {
-   					          cal.add (Calendar.DAY_OF_YEAR, 1);
-   					          days++;
+	   					      int days = 0;
+	   					      while (calEnd.after(cal))    {
+	   					          cal.add (Calendar.DAY_OF_YEAR, 1);
+	   					          days++;
+	   					      }
+	   					      diff = days;
    					      }
+									
+							
    					      
-   							//end
+   						System.out.println(diff);
    							
    							
-   							if(days <= num){
+   							if((diff <= numI) && (diff >=0)){
 	   							long patientid = appt.getPatient();
 	   							long hcpid = appt.getHcp();
 	   							
@@ -138,19 +164,16 @@ text-align: center;
 	   							MessageBean messageNew = new MessageBean();
 	   							
 	   							String body = "You have an appointment on ";
-	   							body .= date;
-	   							body .= " with Dr. ";
-	   							body .= hcpName;
-	   							console.log(body);
+	   							body += date;
+	   							body += " with Dr. ";
+	   							body += hcpName;
+	   							//console.log(body);
 	   							
-	   							int N = 0;
-	   							//N is num of days between appt date and current date
-	   							//do something to calculate N
 	   							
 	   							String subject = "Reminder: upcoming appointment in ";
-	   							subject .= N;
-	   							subject .=" day(s)";
-	   							console.log(subject);
+	   							subject += diff;
+	   							subject +=" day(s)";
+	   							//console.log(subject);
 	   							
 	   							messageNew.setBody(body);
 	   							messageNew.setFrom(loggedInMID);
@@ -161,17 +184,17 @@ text-align: center;
 	   							action.sendMessage(messageNew);
 	   							
 	   							//send fake email
-	   							FakeEmailDAODAO emailDAO = DAOFactory.getProductionInstance().getFakeEmailDAO();
+	   							FakeEmailDAO emailDAO = DAOFactory.getProductionInstance().getFakeEmailDAO();
 	   							Email emailNew = new Email();
-	   							List<String> toList;
+	   							List<String> toList = new ArrayList<String>();
 	   							toList.add(patientEmail);
 	   							emailNew.setToList(toList);
 	   							emailNew.setFrom("");//what is admin's email address???
 	   							emailNew.setSubject(subject);
 	   							emailNew.setBody(body);
-	   							emailNew.setTimeAdded(curr_date);
+	   							emailNew.setTimeAdded(current);
 	   							
-	   							emailDAO.sendEmailRecord(email);
+	   							emailDAO.sendEmailRecord(emailNew);
    							}
    						}
    					}
